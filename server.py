@@ -71,10 +71,10 @@ async def search_username(request: SearchRequest):
             "total_found": len(MOCK_DATABASES[username])
         }
     
-# If not in mock, try Google Drive
+# If not in mock, try Google Drive with better error handling
     try:
-        # List files from Google Drive (public with editor permissions)
-        list_url = f"https://www.googleapis.com/drive/v3/files?q='{DRIVE_FOLDER_ID}'+in+parents&fields=files(id,name,mimeType,size)"
+        # List files from Google Drive (public folder)
+        list_url = f"https://www.googleapis.com/drive/v3/files?q='{DRIVE_FOLDER_ID}'+in+parents&fields=files(id,name,mimeType,size)&key=AIzaSyDDK5CjQJLK5aMwD5gD6bI"
         response = requests.get(list_url, timeout=30)
         
         if response.status_code == 200:
@@ -93,8 +93,7 @@ async def search_username(request: SearchRequest):
                         "ip": "Nova no encontró",
                         "password": "••••••••",
                         "salts": "0",
-                        "found": False,
-                        "file_id": file.get("id")
+                        "found": False
                     })
                 return {
                     "success": True,
