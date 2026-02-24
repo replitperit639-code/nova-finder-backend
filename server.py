@@ -71,7 +71,43 @@ async def search_username(request: SearchRequest):
             "total_found": len(MOCK_DATABASES[username])
         }
     
-    # If not in mock, return empty results with available databases
+# If not in mock, try Google Drive
+    try:
+        # List files from Google Drive (public with editor permissions)
+        list_url = f"https://www.googleapis.com/drive/v3/files?q='{DRIVE_FOLDER_ID}'+in+parents&fields=files(id,name,mimeType,size)"
+        response = requests.get(list_url, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            files = data.get("files", [])
+            db_files = [f for f in files if f.get("name", "").endswith((".db", ".json"))]
+            
+            if db_files:
+                results = []
+                for file in db_files:
+                    clean_name = file["name"].replace(".db", "").replace(".json", "")
+                    results.append({
+                        "database_name": clean_name,
+                        "server_ip": f"play.{clean_name.lower()}.com",
+                        "server": clean_name,
+                        "ip": "Nova no encontró",
+                        "password": "••••••••",
+                        "salts": "0",
+                        "found": False,
+                        "file_id": file.get("id")
+                    })
+                return {
+                    "success": True,
+                    "username": username,
+                    "results": results,
+                    "total_found": 0,
+                    "drive_files": len(db_files),
+                    "message": f"Conectado a Drive: {len(db_files)} databases"
+                }
+    except Exception as e:
+        print(f"Drive error: {e}")
+    
+    # Default fallback
     available_dbs = [
         {"database_name": "nigthbox", "server_ip": "play.nigthbox.com", "server": "nigthbox", "ip": "Nova no encontró", "password": "••••••••", "salts": "0", "found": False},
         {"database_name": "nauticmc", "server_ip": "play.nauticmc.com", "server": "nauticmc", "ip": "Nova no encontró", "password": "••••••••", "salts": "0", "found": False}
@@ -82,7 +118,7 @@ async def search_username(request: SearchRequest):
         "username": username,
         "results": available_dbs,
         "total_found": 0,
-        "message": "Usuario no encontrado en las databases"
+        "message": "Usuario no encontrado"
     }
 
 @app.get("/api/databases")
